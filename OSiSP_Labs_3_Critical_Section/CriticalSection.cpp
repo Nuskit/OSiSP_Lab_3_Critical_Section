@@ -64,10 +64,7 @@ void CriticalSection::WaitFreeCriticalSection()
 void CriticalSection::EnterCriticalSection()
 {
 	if (!IsThreadProcInCriticalSection())
-	{
 		WaitFreeCriticalSection();
-		TakeByThreadProc();
-	}
 	else
 		InterlockedIncrement(&status->recursionCount);
 }
@@ -83,8 +80,11 @@ bool CriticalSection::TryEnterCriticalSection()
 	LONG spinCount = status->spinCount;
 	do
 	{
-		if (InterlockedCompareExchange(&status->lockCount, 0, 1) == 1)
+		if (InterlockedCompareExchange(&status->lockCount, 1, 0) == 1)
+		{
+			TakeByThreadProc();
 			isFreeSection = true;
+		}
 	} while ((!isFreeSection) && (--spinCount > 0));
 
 	return isFreeSection;
@@ -98,8 +98,7 @@ void CriticalSection::LeaveCriticalSection()
 		{
 			LeaveByThreadProc();
 			InterlockedDecrement(&status->lockCount);
-			if (status->lockCount > 1)
-				SetEvent(status->lockEvent);
+			SetEvent(status->lockEvent);
 		}
 		else
 			InterlockedDecrement(&status->recursionCount);

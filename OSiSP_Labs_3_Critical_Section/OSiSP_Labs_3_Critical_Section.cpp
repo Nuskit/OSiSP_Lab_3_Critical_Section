@@ -7,7 +7,8 @@
 #define TRIES 5
 #define FILE_VALUES L"Global\\Data"
 #define SECTION_NAME L"CriticalSection"
-#define NUM_PROC 5
+#define COUNT_PROC 3
+#define COUNT_THREAD 3 
 #define TIME_WAIT_LOAD_ALL_PROCESS 100
 using namespace std;
 
@@ -27,8 +28,8 @@ void checkRecursiveSection()
 void workWithProc(wchar_t *fileName)
 {
 	section->EnterCriticalSection();
-	PROCESS_INFORMATION processInformation[NUM_PROC];
-	for (int i = 0; i < NUM_PROC; ++i)
+	PROCESS_INFORMATION processInformation[COUNT_PROC];
+	for (int i = 0; i < COUNT_PROC; ++i)
 	{
 		STARTUPINFO startupInfo;
 		ZeroMemory(&startupInfo, sizeof(STARTUPINFO));
@@ -43,7 +44,7 @@ void workWithProc(wchar_t *fileName)
 	section->LeaveCriticalSection();
 
 	getchar();
-	for (int i = 0; i < NUM_PROC; ++i)
+	for (int i = 0; i < COUNT_PROC; ++i)
 		if (WaitForSingleObject(processInformation[i].hProcess, INFINITY) != WAIT_OBJECT_0)
 		{
 			cout << "Problem close proc " << processInformation[i].dwProcessId << ", terminated." << endl;
@@ -121,9 +122,17 @@ int wmain(int argc, wchar_t *argv[])
 		{
 			OpenMapView();
 			section = new CriticalSection(SECTION_NAME, false);
-			HANDLE thread = CreateThread(NULL, 0, &ProcessProcedure, NULL, NULL, NULL);
-			ProcessProcedure();
-			WaitForSingleObject(thread, INFINITE);
+
+			HANDLE thread[COUNT_THREAD];
+			for (int i = 0; i < COUNT_THREAD; ++i)
+			{
+				thread[i] = CreateThread(NULL, 0, &ProcessProcedure, NULL, NULL, NULL);
+			}
+			for (int i = 0; i < COUNT_THREAD; ++i)
+			{
+				WaitForSingleObject(thread[i], INFINITE);
+			}
+			
 			CloseMapView();
 			delete section;
 		}

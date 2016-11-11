@@ -12,10 +12,10 @@ public:
 	void LeaveCriticalSection();
 private:
 	typedef struct _CriticalSectionState {
-		volatile DWORD owningThread;
-		volatile LONG spinCount;
-		volatile LONG lockCount;
-		volatile LONG recursionCount;
+		DWORD owningThread;
+		LONG spinCount;
+		LONG lockCount;
+		LONG recursionCount;
 	} CriticalSectionState;
 	HANDLE mappedFile;
 	CriticalSectionState* status;

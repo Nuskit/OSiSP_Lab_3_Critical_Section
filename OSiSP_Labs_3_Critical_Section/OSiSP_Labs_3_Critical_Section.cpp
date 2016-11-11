@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Criticalsection.h"
 
+#define SPIN_COUNT 10
 #define BUF_SIZE 256
 #define ARRAY_SIZE 10
 #define TRIES 5
@@ -33,7 +34,7 @@ void workWithProc(wchar_t *fileName)
 		ZeroMemory(&startupInfo, sizeof(STARTUPINFO));
 		startupInfo.cb = sizeof(STARTUPINFO);
 
-		wchar_t proc_line[256];
+		wchar_t proc_line[266];
 		swprintf(proc_line, L"%s %d", fileName, i);
 
 		CreateProcess(fileName, proc_line, NULL, NULL, FALSE, CREATE_UNICODE_ENVIRONMENT, NULL, NULL, &startupInfo, &processInformation[i]);
@@ -96,7 +97,7 @@ int wmain(int argc, wchar_t *argv[])
 		else
 		{
 			OpenMapView();
-			section = new CriticalSection(SECTION_NAME, true, 10);
+			section = new CriticalSection(SECTION_NAME, true, SPIN_COUNT);
 			checkRecursiveSection();
 
 			int values[ARRAY_SIZE];

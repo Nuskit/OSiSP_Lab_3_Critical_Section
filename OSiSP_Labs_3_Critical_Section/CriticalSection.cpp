@@ -122,8 +122,7 @@ void CriticalSection::LeaveCriticalSection()
 	{
 		if (status->recursionCount == 1)
 			LeaveByThread();
-		InterlockedDecrement(&status->recursionCount);
-		if (status->lockCount > 0)
+		if (InterlockedDecrement(&status->recursionCount) == 0 && status->lockCount > 0)
 			SetEvent(lockEvent);
 	}
 }

@@ -9,21 +9,20 @@ std::wstring CriticalSection::GenerateName(const wchar_t* prefix, const wchar_t*
 
 void CriticalSection::InitializeCriticalSection(const wchar_t* name)
 {
-	std::wstring eventName = GenerateName(L"EVENT", name);
+	std::wstring eventName = GenerateName(L"Global\\EVENT_", name);
 	lockEvent = CreateEventW(NULL, FALSE, FALSE, eventName.c_str());
 	status->lockCount = 0;
 	status->owningThread = 0;
 	status->recursionCount = 0;
 	status->spinCount = 0;
-	status->owningProc = 0;
 }
 
 CriticalSection::CriticalSection(const wchar_t* name, DWORD spinCount)
 {
-	std::wstring fileName = GenerateName(L"FILE", name);
+	std::wstring fileName = GenerateName(L"Global\\FILE_", name);
 	mappedFile = CreateFileMappingW(INVALID_HANDLE_VALUE, NULL,
 		PAGE_READWRITE, 0, sizeof(*status), fileName.c_str());
-	status = static_cast<CriticalSectionState*>(MapViewOfFile(mappedFile, FILE_MAP_WRITE, 0, 0, 0));
+	status = static_cast<CriticalSectionState*>(MapViewOfFile(mappedFile, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(*status)));
 	InitializeCriticalSection(name);
 	SetSpinCount(spinCount);
 }
@@ -40,16 +39,14 @@ void CriticalSection::SetSpinCount(LONG spinCount)
 	InterlockedExchange(&status->spinCount, spinCount);
 }
 
-void CriticalSection::TakeByThreadProc()
+void CriticalSection::TakeByThread()
 {
-	InterlockedExchange(&status->owningProc, GetCurrentProcessId());
 	InterlockedExchange(&status->owningThread, GetCurrentThreadId());
 }
 
-void CriticalSection::LeaveByThreadProc()
+void CriticalSection::LeaveByThread()
 {
 	InterlockedExchange(&status->owningThread, 0);
-	InterlockedExchange(&status->owningProc, 0);
 }
 
 void CriticalSection::WaitFreeCriticalSection()
@@ -63,15 +60,15 @@ void CriticalSection::WaitFreeCriticalSection()
 
 void CriticalSection::EnterCriticalSection()
 {
-	if (!IsThreadProcInCriticalSection())
+	if (!IsThreadInCriticalSection())
 		WaitFreeCriticalSection();
 	else
 		InterlockedIncrement(&status->recursionCount);
 }
 
-bool CriticalSection::IsThreadProcInCriticalSection()
+bool CriticalSection::IsThreadInCriticalSection()
 {
-	return (status->owningProc == GetCurrentProcessId()) && (status->owningThread == GetCurrentThreadId());
+	return status->owningThread == GetCurrentThreadId();
 }
 
 bool CriticalSection::TryEnterCriticalSection()
@@ -82,7 +79,7 @@ bool CriticalSection::TryEnterCriticalSection()
 	{
 		if (InterlockedCompareExchange(&status->lockCount, 1, 0) == 1)
 		{
-			TakeByThreadProc();
+			TakeByThread();
 			isFreeSection = true;
 		}
 	} while ((!isFreeSection) && (--spinCount > 0));
@@ -92,11 +89,11 @@ bool CriticalSection::TryEnterCriticalSection()
 
 void CriticalSection::LeaveCriticalSection()
 {
-	if (status->owningThread == GetCurrentThreadId())
+	if (IsThreadInCriticalSection())
 	{
 		if (status->recursionCount == 0)
 		{
-			LeaveByThreadProc();
+			LeaveByThread();
 			InterlockedDecrement(&status->lockCount);
 			SetEvent(lockEvent);
 		}

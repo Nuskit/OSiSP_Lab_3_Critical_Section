@@ -10,7 +10,7 @@ std::wstring CriticalSection::GenerateName(const wchar_t* prefix, const wchar_t*
 void CriticalSection::InitializeCriticalSection(const wchar_t* name)
 {
 	std::wstring eventName = GenerateName(L"EVENT", name);
-	status->lockEvent = CreateEventW(NULL, FALSE, FALSE, eventName.c_str());
+	lockEvent = CreateEventW(NULL, FALSE, FALSE, eventName.c_str());
 	status->lockCount = 0;
 	status->owningThread = 0;
 	status->recursionCount = 0;
@@ -30,7 +30,7 @@ CriticalSection::CriticalSection(const wchar_t* name, DWORD spinCount)
 
 CriticalSection::~CriticalSection()
 {
-	CloseHandle(status->lockEvent);
+	CloseHandle(lockEvent);
 	UnmapViewOfFile(status);
 	CloseHandle(mappedFile);
 }
@@ -57,7 +57,7 @@ void CriticalSection::WaitFreeCriticalSection()
 	while (!TryEnterCriticalSection())
 	{
 		InterlockedIncrement(&status->lockCount);
-		WaitForSingleObject(status->lockEvent, INFINITE);
+		WaitForSingleObject(lockEvent, INFINITE);
 	}
 }
 
@@ -98,7 +98,7 @@ void CriticalSection::LeaveCriticalSection()
 		{
 			LeaveByThreadProc();
 			InterlockedDecrement(&status->lockCount);
-			SetEvent(status->lockEvent);
+			SetEvent(lockEvent);
 		}
 		else
 			InterlockedDecrement(&status->recursionCount);

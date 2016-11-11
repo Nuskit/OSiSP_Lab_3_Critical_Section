@@ -17,10 +17,10 @@ private:
 		DWORD owningThread;
 		DWORD owningProc;
 		LONG recursionCount;
-		HANDLE lockEvent;
 	} CriticalSectionState;
 	HANDLE mappedFile;
 	CriticalSectionState* status;
+	HANDLE lockEvent;
 private:
 	std::wstring GenerateName(const wchar_t* prefix, const wchar_t* name);
 	void TakeByThreadProc();

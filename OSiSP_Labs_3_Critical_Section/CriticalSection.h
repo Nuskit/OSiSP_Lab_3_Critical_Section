@@ -4,7 +4,7 @@
 
 class CriticalSection {
 public:
-	CriticalSection(const wchar_t* pszName, DWORD dwSpinCount = 4000);
+	CriticalSection(const wchar_t* pszName, bool isCreateSection, DWORD dwSpinCount = 4000);
 	~CriticalSection();
 	void SetSpinCount(LONG dwSpinCount);
 	void EnterCriticalSection();
@@ -12,10 +12,10 @@ public:
 	void LeaveCriticalSection();
 private:
 	typedef struct _CriticalSectionState {
-		DWORD owningThread;
-		LONG spinCount;
-		LONG lockCount;
-		LONG recursionCount;
+		volatile DWORD owningThread;
+		volatile LONG spinCount;
+		volatile LONG lockCount;
+		volatile LONG recursionCount;
 	} CriticalSectionState;
 	HANDLE mappedFile;
 	CriticalSectionState* status;
@@ -27,4 +27,8 @@ private:
 	void WaitFreeCriticalSection();
 	void InitializeCriticalSection(const wchar_t* name);
 	bool IsThreadInCriticalSection();
+	HANDLE CreateSectionMap(const std::wstring& fileName);
+	HANDLE OpenSectionMap(const std::wstring& fileName);
+	void CreateSection(const wchar_t* name, DWORD spinCount);
+	void OpenSection(const wchar_t* name, DWORD spinCount);
 };
